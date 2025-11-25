@@ -56,6 +56,9 @@ main() {
   #Test auf Vorhandensein von 7z
   if [ ! -f "$MACPORTS_PATH/7z" ]; then
           logger Cannot create backup - 7z command not found!
+          if [ "$EUID" -ne 0 ]; then
+             osascript -e 'display notification "Cannot create backup - 7z command not found!" with title "Mozilla Backup"' > /dev/null 2>&1
+          fi
 	  exit 0
   fi
 
@@ -70,9 +73,9 @@ main() {
   MEINPASSWORT=$(get_password "$schluessel" "$PWFILE")
   case $? in
     0) : ;;
-    1) logger "Password key \"$schluessel\" not found in $PWFILE."; exit 1 ;;
+    1) logger "Password key \"$schluessel\" not found in $PWFILE."; osascript -e 'display notification "Key not found in password file" with title "Mozilla Backup"' > /dev/null 2>&1;exit 1 ;;
     2) # unsichere Rechte oder Stat-Fehler
-       logger "Insecure password file $PWFILE or other error has occurred." exit 1 ;;
+       logger "Insecure password file $PWFILE or other error has occurred."; osascript -e 'display notification "Insecure password file or other error" with title "Mozilla Backup"' > /dev/null 2>&1;exit 1 ;;
     *) exit 1 ;;
   esac
   
@@ -96,7 +99,13 @@ main() {
   #Alte Backups weglöschen
   cd $BACKUP_DIR/
   find . -name $PROJECT_NAME'*' -mtime $PLUS$BACKUP_RETENTION -exec rm {} \;
-  logger Have created Mozilla backup on date $DATE. Backup retention time is set to $BACKUP_RETENTION days.
+  logger Have created Mozilla backup on date $DATE. Backup retention time is set to $BACKUP_RETENTION days.A
+  
+  #sofern nicht root, dann per osascript Notification an den User erstellen
+  if [ "$EUID" -ne 0 ]; then
+        osascript -e 'display notification "Have created Mozilla bookmarks backup" with title "Mozilla Backup"' > /dev/null 2>&1
+  fi
+
 }
 
 main "$@"
