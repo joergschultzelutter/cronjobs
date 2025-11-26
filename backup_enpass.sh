@@ -56,6 +56,7 @@ main() {
 	  if [ "$EUID" -ne 0 ]; then
 		  osascript -e 'display notification "Cannot create backup - 7z command not found!" with title "Enpass Backup"' > /dev/null 2>&1
 	  fi
+	  exit 1
   fi
 
   #Zielverzeichnis erstellen, falls es nicht existiert

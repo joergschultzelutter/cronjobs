@@ -56,7 +56,7 @@ main() {
 	  if [ "$EUID" -ne 0 ]; then
 		  osascript -e 'display notification "Cannot create backup - 7z command not found!" with title "MoneyMoney Backup"' > /dev/null 2>&1
 	  fi
-	  exit 0
+	  exit 1
   fi
 
   #backup-Dir anlegen, falls nicht vorhanden
