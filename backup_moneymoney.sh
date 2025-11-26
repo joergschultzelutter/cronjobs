@@ -1,13 +1,13 @@
 #!/bin/zsh
 #
-# Cronjob zum Backup der MonezMoney-Datenbank
+# Cronjob zum Backup der MoneyMoney-Datenbank
 # Von den Backup-Archiven werden jeweils nur die letzten 15 Backups behalten; der Rest wird gelöscht
 #
 # Ab MacOS Catalina notwendig: System Preferences - Privacy & Security - Full Disk Access -> /usr/sbin/cron hinzufügen
 #
 # Entpacken der Dateien via 7z x -p"<Passwort>"
 #
-# Autor: Jörg Schultze-Lutter, 2195
+# Autor: Jörg Schultze-Lutter,20255
 #
 # Falls sich tar-Archive nicht entpacken lassen: gnu-tar via Macports installieren und dann erneut probieren
 
@@ -73,7 +73,7 @@ main() {
     0) : ;;
     1) logger "Password key \"$schluessel\" not found in $PWFILE."; osascript -e 'display notification "Key not found in password file" with title "MoneyMoney Backup"' > /dev/null 2>&1;exit 1 ;;
     2) # unsichere Rechte oder Stat-Fehler
-       logger "Insecure password file $PWFILE or other error has occurred."; osascript -e 'display notification "Insecure password file or other error" with title "Mozilla Backup"' > /dev/null 2>&1;exit 1 ;;
+       logger "Insecure password file $PWFILE or other error has occurred."; osascript -e 'display notification "Insecure password file or other error" with title "MoneyMoney Backup"' > /dev/null 2>&1;exit 1 ;;
     *) exit 1 ;;
   esac
 
