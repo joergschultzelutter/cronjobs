@@ -1,8 +1,35 @@
 #!/bin/zsh
+#
+# Cronjob zum Backup der MonezMoney-Datenbank
+# Von den Backup-Archiven werden jeweils nur die letzten 15 Backups behalten; der Rest wird gelöscht
+#
+# Ab MacOS Catalina notwendig: System Preferences - Privacy & Security - Full Disk Access -> /usr/sbin/cron hinzufügen
+#
+# Entpacken der Dateien via 7z x -p"<Passwort>"
+#
+# Autor: Jörg Schultze-Lutter, 2195
+#
+# Falls sich tar-Archive nicht entpacken lassen: gnu-tar via Macports installieren und dann erneut probieren
+
+
+#
+# Crontab-Settings
+#
+# *     *     *     *     *  command
+# -     -     -     -     -
+# |     |     |     |     |
+# |     |     |     |     +----- weekday (0 - 7) (Sunday = 0 and 7)
+# |     |     |     +------- month (1 - 12)
+# |     |     +--------- day (1 - 31)
+# |     +----------- hour (0 - 23)
+# +------------- minute (0 - 59)
+#0 22 * * * /Users/jsl/cronjobs/backup_moneymoney.sh
+
 
 PATH=/usr/bin:/bin:/usr/sbin:/sbin:/opt/local/bin
 
-SRC="com.moneymoney-app.retail"
+SRC="com.moneymoney-app.retail/Data/Library/"
+#SRC="com.moneymoney-app.retail"
 SRC_DIR="/Users/jsl/Library/Containers"
 PROJECT_NAME="MoneyMoney"
 ROOT_DIR="/Users/jsl/Documents/Backups"
@@ -12,74 +39,106 @@ BACKUP_RETENTION=15
 BACKUP_RETENTION_CLOUD=2
 AWK_COMMAND="NR>"$BACKUP_RETENTION
 AWK_COMMAND_CLOUD="NR>"$BACKUP_RETENTION_CLOUD
-PASSPHRASE="REPLACE_WITH_CORRECT_PASSWORD"
 MACPORTS_PATH=/opt/local/bin
 
 DATE=`date +"%Y%m%d"`
 
-if [ ! -f "$MACPORTS_PATH/7z" ]; then
-	logger Cannot create backup - 7z command not found!
-	#Sofern nicht Root, dann Notification an Nutzer
-	if [ "$EUID" -ne 0 ]; then
-		osascript -e 'display notification "Cannot create backup - 7z command not found!" with title "Cron job report"' > /dev/null 2>&1
-	fi
-fi
+SCRIPT_DIR="/Users/jsl/cronjobs"
+PWFILE="$SCRIPT_DIR/cronpw.txt"
+. "$SCRIPT_DIR/get_password.sh"
 
-#backup-Dir anlegen, falls nicht vorhanden
-if [ ! -d "$BACKUP_DIR" ]; then
-        mkdir -p $BACKUP_DIR
-fi
 
-#cloud-backup-temp anlegen, falls nicht vorhanden
-if [ ! -d "$CLOUD_BACKUP_TEMP/$PROJECT_NAME" ]; then
-	mkdir -p $CLOUD_BACKUP_TEMP/$PROJECT_NAME
-fi
+main() {
 
-#Archiv erstellen
-tar -cf $BACKUP_DIR/$PROJECT_NAME-$DATE.tar -C $SRC_DIR $SRC > /dev/null
+  if [ ! -f "$MACPORTS_PATH/7z" ]; then
+	  logger Cannot create backup - 7z command not found!
+	  #Sofern nicht Root, dann Notification an Nutzer
+	  if [ "$EUID" -ne 0 ]; then
+		  osascript -e 'display notification "Cannot create backup - 7z command not found!" with title "MoneyMoney Backup"' > /dev/null 2>&1
+	  fi
+	  exit 0
+  fi
 
-#tar-archiv in 7z einpacken (lokale Kopie ohne Passwort)
-#zunächst bestehendes Archiv ggf. weglöschen
-if [ -f "$BACKUP_DIR/$PROJECT_NAME-$DATE.7z" ]; then
-        rm $BACKUP_DIR/$PROJECT_NAME-$DATE.7z > /dev/null
-fi
+  #backup-Dir anlegen, falls nicht vorhanden
+  if [ ! -d "$BACKUP_DIR" ]; then
+          mkdir -p $BACKUP_DIR
+  fi
 
-#nun das Archiv normal ohne Passwort einpacken
-7z a -t7z -mx=9 $BACKUP_DIR/$PROJECT_NAME-$DATE.7z $BACKUP_DIR/$PROJECT_NAME-$DATE.tar > /dev/null
 
-#jetzt das tar-archiv für die Cloud erstellen; wird gesondert gesichert
-#zunächst bestehendes Archiv ggf. weglöschen
-if [ -f "$CLOUD_BACKUP_TEMP/$PROJECT_NAME/$PROJECT_NAME-$DATE.7z" ]; then
-        rm $CLOUD_BACKUP_TEMP/$PROJECT_NAME/$PROJECT_NAME-$DATE.7z > /dev/null
-fi
+  local schluessel="PASSWORD_MONEYMONEY_BACKUPS"
+  local MEINPASSWORT
 
-#nun das gleiche Archiv gesondert geschützt in das Cloudvereichnis stellen
-7z a -t7z -mx=9 -mhe=on -p$PASSPHRASE $CLOUD_BACKUP_TEMP/$PROJECT_NAME/$PROJECT_NAME-$DATE.7z $BACKUP_DIR/$PROJECT_NAME-$DATE.tar > /dev/null
+  MEINPASSWORT=$(get_password "$schluessel" "$PWFILE")
+  case $? in
+    0) : ;;
+    1) logger "Password key \"$schluessel\" not found in $PWFILE."; osascript -e 'display notification "Key not found in password file" with title "MoneyMoney Backup"' > /dev/null 2>&1;exit 1 ;;
+    2) # unsichere Rechte oder Stat-Fehler
+       logger "Insecure password file $PWFILE or other error has occurred."; osascript -e 'display notification "Insecure password file or other error" with title "Mozilla Backup"' > /dev/null 2>&1;exit 1 ;;
+    *) exit 1 ;;
+  esac
 
-#sofern root: anderen Nutzer zuweisen
-if [ "$EUID" -eq 0 ]; then
-	chown jsl:staff $BACKUP_DIR/$PROJECT_NAME-$DATE.7z $CLOUD_BACKUP_TEMP/$PROJECT_NAME/$PROJECT_NAME-$DATE.7z
-fi
+  #cloud-backup-temp anlegen, falls nicht vorhanden
+  if [ ! -d "$CLOUD_BACKUP_TEMP/$PROJECT_NAME" ]; then
+	  mkdir -p $CLOUD_BACKUP_TEMP/$PROJECT_NAME
+  fi
 
-#generell: Leserechte einschränken
-chmod u=rw,go-rwx $BACKUP_DIR/$PROJECT_NAME-$DATE.7z $CLOUD_BACKUP_TEMP/$PROJECT_NAME/$PROJECT_NAME-$DATE.7z
+  #Archiv erstellen
+  tar --no-xattrs -cf $BACKUP_DIR/$PROJECT_NAME-$DATE.tar -C $SRC_DIR $SRC > /dev/null
 
-#Löschen eventueller alter Kopien im Cloudverzeichnis
-cd $CLOUD_BACKUP_TEMP/$PROJECT_NAME
-ls -t | awk $AWK_COMMAND_CLOUD | xargs rm -f
+  #Archiv auf Integrität prüfen
+  if ! tar tf $BACKUP_DIR/$PROJECT_NAME-$DATE.tar &> /dev/null; then
+	  logger tar file $BACKUP_DIR/$PROJECT_NAME-$DATE.tar failed the integrity check
+          if [ "$EUID" -ne 0 ]; then
+                  osascript -e 'display notification "tar file failed the integrity check!" with title "MoneyMoney Backup"' > /dev/null 2>&1
+          fi
+	  exit 1
+  fi
 
-#das work-tar-file löschen
-rm $BACKUP_DIR/$PROJECT_NAME-$DATE.tar
 
-# im eigentlichen Backup-Verzeichnis nur die letzten 15 Dateien behalten; der Rest wird gelöscht
-cd $BACKUP_DIR
-ls -t | awk $AWK_COMMAND | xargs rm -f
+  #tar-archiv in 7z einpacken (lokale Kopie ohne Passwort)
+  #zunächst bestehendes Archiv ggf. weglöschen
+  if [ -f "$BACKUP_DIR/$PROJECT_NAME-$DATE.7z" ]; then
+          rm $BACKUP_DIR/$PROJECT_NAME-$DATE.7z > /dev/null
+  fi
 
-#syslog-Nachricht einstellen
-logger Have created MoneyMoney backup on date $DATE. Backup retention time is set to $BACKUP_RETENTION files.
+  #nun das Archiv normal ohne Passwort einpacken
+  7z a -t7z -mx=9 $BACKUP_DIR/$PROJECT_NAME-$DATE.7z $BACKUP_DIR/$PROJECT_NAME-$DATE.tar > /dev/null
 
-#sofern nicht root, dann per osascript Notification an den User erstellen
-if [ "$EUID" -ne 0 ]; then
-        osascript -e 'display notification "Have created MoneyMoney database backup" with title "Cron job report"' > /dev/null 2>&1
-fi
+  #jetzt das tar-archiv für die Cloud erstellen; wird gesondert gesichert
+  #zunächst bestehendes Archiv ggf. weglöschen
+  if [ -f "$CLOUD_BACKUP_TEMP/$PROJECT_NAME/$PROJECT_NAME-$DATE.7z" ]; then
+          rm $CLOUD_BACKUP_TEMP/$PROJECT_NAME/$PROJECT_NAME-$DATE.7z > /dev/null
+  fi
 
+  #nun das gleiche Archiv gesondert geschützt in das Cloudvereichnis stellen
+  7z a -t7z -mx=9 -mhe=on -p"$MEINPASSWORT" $CLOUD_BACKUP_TEMP/$PROJECT_NAME/$PROJECT_NAME-$DATE.7z $BACKUP_DIR/$PROJECT_NAME-$DATE.tar > /dev/null
+
+  #sofern root: anderen Nutzer zuweisen
+  if [ "$EUID" -eq 0 ]; then
+	  chown jsl:staff $BACKUP_DIR/$PROJECT_NAME-$DATE.7z $CLOUD_BACKUP_TEMP/$PROJECT_NAME/$PROJECT_NAME-$DATE.7z
+  fi
+
+  #generell: Leserechte einschränken
+  chmod u=rw,go-rwx $BACKUP_DIR/$PROJECT_NAME-$DATE.7z $CLOUD_BACKUP_TEMP/$PROJECT_NAME/$PROJECT_NAME-$DATE.7z
+
+  #Löschen eventueller alter Kopien im Cloudverzeichnis
+  cd $CLOUD_BACKUP_TEMP/$PROJECT_NAME
+  ls -t | awk $AWK_COMMAND_CLOUD | xargs rm -f
+
+  #das work-tar-file löschen
+  rm $BACKUP_DIR/$PROJECT_NAME-$DATE.tar
+
+  # im eigentlichen Backup-Verzeichnis nur die letzten 15 Dateien behalten; der Rest wird gelöscht
+  cd $BACKUP_DIR
+  ls -t | awk $AWK_COMMAND | xargs rm -f
+
+  #syslog-Nachricht einstellen
+  logger Have created MoneyMoney backup on date $DATE. Backup retention time is set to $BACKUP_RETENTION files.
+
+  #sofern nicht root, dann per osascript Notification an den User erstellen
+  if [ "$EUID" -ne 0 ]; then
+          osascript -e 'display notification "Have created MoneyMoney database backup" with title "Cron job report"' > /dev/null 2>&1
+  fi
+}
+
+main "$@"

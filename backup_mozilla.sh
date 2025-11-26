@@ -99,7 +99,7 @@ main() {
   #Alte Backups weglöschen
   cd $BACKUP_DIR/
   find . -name $PROJECT_NAME'*' -mtime $PLUS$BACKUP_RETENTION -exec rm {} \;
-  logger Have created Mozilla backup on date $DATE. Backup retention time is set to $BACKUP_RETENTION days.A
+  logger Have created Mozilla backup on date $DATE. Backup retention time is set to $BACKUP_RETENTION days.
   
   #sofern nicht root, dann per osascript Notification an den User erstellen
   if [ "$EUID" -ne 0 ]; then
