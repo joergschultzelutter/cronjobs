@@ -1,0 +1,4 @@
+PASSWORD_MOZILLA_BACKUPS=my-password-dummy
+PASSWORD_MONEYMONEY_BACKUPS=my-password-dummy
+PASSWORD_ENPASS_BACKUPS=my-password-dummy
+PASSWORD_GOOGLE_DRIVE=my-password-dummy
