@@ -7,7 +7,7 @@
 #
 # Entpacken der Dateien via 7z x -p"<Passwort>"
 #
-# Autor: Jörg Schultze-Lutter,20255
+# Autor: Jörg Schultze-Lutte, 2025
 #
 # Falls sich tar-Archive nicht entpacken lassen: gnu-tar via Macports installieren und dann erneut probieren
 
@@ -23,7 +23,7 @@
 # |     |     +--------- day (1 - 31)
 # |     +----------- hour (0 - 23)
 # +------------- minute (0 - 59)
-#0 22 * * * /Users/jsl/cronjobs/backup_enpass.sh
+#0 20 * * * /Users/jsl/cronjobs/backup_enpass.sh
 
 PATH=/usr/bin:/bin:/usr/sbin:/sbin:/opt/local/bin
 
