@@ -52,4 +52,3 @@ get_password() {
 
   printf '%s\n' "$passwort"
 }
-
