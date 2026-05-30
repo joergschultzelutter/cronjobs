@@ -7,7 +7,7 @@
 #
 # Entpacken der Dateien via 7z x -p"<Passwort>"
 #
-# Autor: Jörg Schultze-Lutter, 2025
+# Autor: Jörg Schultze-Luttr, 2025
 #
 
 #
@@ -21,13 +21,13 @@
 # |     |     +--------- day (1 - 31)
 # |     +----------- hour (0 - 23)
 # +------------- minute (0 - 59)
-#0 22 * * * /Users/jsl/cronjobs/backup_mozilla.sh
+#0 20 * * * /Users/jsl/cronjobs/backup_mozilla.sh
 
 
 PATH=/usr/bin:/bin:/usr/sbin:/sbin:/opt/local/bin
 
 # Mozilla-Profil und Username anpassen
-MOZILLA_PROFILE="epiacaea.default-release"
+MOZILLA_PROFILE="rbrescqi.default-release"
 USERNAME="jsl"
 
 # Quellverzeichnis
