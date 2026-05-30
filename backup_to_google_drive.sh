@@ -6,7 +6,7 @@
 #
 # Entpacken der Dateien via 7z x -p"<Passwort>"
 #
-# Autor: Jörg Schultze-Lutter ,202
+# Autor: Jörg Schultze-Luter, 2025
 #
 
 #
@@ -20,7 +20,7 @@
 # |     |     +--------- day (1 - 31)
 # |     +----------- hour (0 - 23)
 # +------------- minute (0 - 59)
-#5 22 * * * /Users/jsl/cronjobs/backup_to_google_drive.sh
+#5 20 * * * /Users/jsl/cronjobs/backup_to_google_drive.sh
 
 PATH=/usr/bin:/bin:/usr/sbin:/sbin:/opt/local/bin
 
