@@ -7,7 +7,7 @@
 #
 # Entpacken der Dateien via 7z x -p"<Passwort>"
 #
-# Autor: Jörg Schultze-Lutte, 2025
+# Autor: Jörg Schultze-Lutter, 2025
 #
 # Falls sich tar-Archive nicht entpacken lassen: gnu-tar via Macports installieren und dann erneut probieren
 
