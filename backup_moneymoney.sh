@@ -29,7 +29,6 @@
 PATH=/usr/bin:/bin:/usr/sbin:/sbin:/opt/local/bin
 
 SRC="com.moneymoney-app.retail/Data/Library/"
-#SRC="com.moneymoney-app.retail"
 SRC_DIR="/Users/jsl/Library/Containers"
 PROJECT_NAME="MoneyMoney"
 ROOT_DIR="/Users/jsl/Documents/Backups"
@@ -83,16 +82,16 @@ main() {
   fi
 
   #Archiv erstellen
-  tar --no-xattrs -cf $BACKUP_DIR/$PROJECT_NAME-$DATE.tar -C $SRC_DIR $SRC > /dev/null
+#  tar --no-xattrs -cf $BACKUP_DIR/$PROJECT_NAME-$DATE.tar -C $SRC_DIR $SRC > /dev/null
 
   #Archiv auf Integrität prüfen
-  if ! tar tf $BACKUP_DIR/$PROJECT_NAME-$DATE.tar &> /dev/null; then
-	  logger tar file $BACKUP_DIR/$PROJECT_NAME-$DATE.tar failed the integrity check
-          if [ "$EUID" -ne 0 ]; then
-                  osascript -e 'display notification "tar file failed the integrity check!" with title "MoneyMoney Backup"' > /dev/null 2>&1
-          fi
-	  exit 1
-  fi
+#  if ! tar tf $BACKUP_DIR/$PROJECT_NAME-$DATE.tar &> /dev/null; then
+#	  logger tar file $BACKUP_DIR/$PROJECT_NAME-$DATE.tar failed the integrity check
+#          if [ "$EUID" -ne 0 ]; then
+#                  osascript -e 'display notification "tar file failed the integrity check!" with title "MoneyMoney Backup"' > /dev/null 2>&1
+#          fi
+#	  exit 1
+#  fi
 
 
   #tar-archiv in 7z einpacken (lokale Kopie ohne Passwort)
@@ -102,7 +101,7 @@ main() {
   fi
 
   #nun das Archiv normal ohne Passwort einpacken
-  7z a -t7z -mx=9 $BACKUP_DIR/$PROJECT_NAME-$DATE.7z $BACKUP_DIR/$PROJECT_NAME-$DATE.tar > /dev/null
+  7z a -t7z -mx=9 $BACKUP_DIR/$PROJECT_NAME-$DATE.7z $SRC_DIR/$SRC > /dev/null
 
   #jetzt das tar-archiv für die Cloud erstellen; wird gesondert gesichert
   #zunächst bestehendes Archiv ggf. weglöschen
@@ -111,7 +110,7 @@ main() {
   fi
 
   #nun das gleiche Archiv gesondert geschützt in das Cloudvereichnis stellen
-  7z a -t7z -mx=9 -mhe=on -p"$MEINPASSWORT" $CLOUD_BACKUP_TEMP/$PROJECT_NAME/$PROJECT_NAME-$DATE.7z $BACKUP_DIR/$PROJECT_NAME-$DATE.tar > /dev/null
+  7z a -t7z -mx=9 -mhe=on -p"$MEINPASSWORT" $CLOUD_BACKUP_TEMP/$PROJECT_NAME/$PROJECT_NAME-$DATE.7z $SRC_DIR/$SRC > /dev/null
 
   #sofern root: anderen Nutzer zuweisen
   if [ "$EUID" -eq 0 ]; then
