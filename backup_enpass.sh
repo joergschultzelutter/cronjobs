@@ -1,29 +1,61 @@
-#!/bin/zsh
+#!/bin/bash
 #
-# Cronjob zum Backup der Enpass-Datenbank
+# Batchjob zum Backup der Enpass-Datenbank
 # Von den Backup-Archiven werden jeweils nur die letzten 15 Backups behalten; der Rest wird gelöscht
 #
-# Ab MacOS Catalina notwendig: System Preferences - Privacy & Security - Full Disk Access -> /usr/sbin/cron hinzufügen
+# Ab MacOS Catalina notwendig: System Preferences - Privacy & Security - Full Disk Access -> /bin/bash und /opt/local/bin/7zz hinzufügen
 #
 # Entpacken der Dateien via 7z x -p"<Passwort>"
 #
 # Autor: Jörg Schultze-Lutter, 2025
 #
-# Falls sich tar-Archive nicht entpacken lassen: gnu-tar via Macports installieren und dann erneut probieren
-
+#
+# NICHT per cron ausführen; Ausführung per cron kann zu Race Condition führen
+#
+#
+# LaunchAgent settings
+#
+#<?xml version="1.0" encoding="UTF-8"?>
+#<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+# "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+#<plist version="1.0">
+#<dict>
+#  <key>Label</key>
+#  <string>com.jsl.backup_enpass</string>
+#
+#  <key>ProgramArguments</key>
+#  <array>
+#    <string>/Users/jsl/cronjobs/backup_enpass.sh</string>
+#  </array>
+#
+#  <key>StartCalendarInterval</key>
+#  <dict>
+#    <key>Hour</key>
+#    <integer>20</integer>
+#    <key>Minute</key>
+#    <integer>0</integer>
+#  </dict>
+#
+#  <key>StandardOutPath</key>
+#  <string>/tmp/backup-enpass-launchd.out</string>
+#
+#  <key>StandardErrorPath</key>
+#  <string>/tmp/backup-enpass-launchd.err</string>
+#
+#  <key>WorkingDirectory</key>
+#  <string>/Users/jsl</string>
+#</dict>
+#</plist>
 
 #
-# Crontab-Settings
+# speichern als ~/Library/LaunchAgents/com.jsl.backup_enpass.plist
 #
-# *     *     *     *     *  command
-# -     -     -     -     -
-# |     |     |     |     |
-# |     |     |     |     +----- weekday (0 - 7) (Sunday = 0 and 7)
-# |     |     |     +------- month (1 - 12)
-# |     |     +--------- day (1 - 31)
-# |     +----------- hour (0 - 23)
-# +------------- minute (0 - 59)
-#0 20 * * * /Users/jsl/cronjobs/backup_enpass.sh
+# Installieren: launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.jsl.backup_enpass.plist
+#
+# Manuell ausführen: launchctl kickstart -k gui/$(id -u)/com.jsl.backup_enpass
+#
+# Deinstallieren: launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/com.jsl.backup_enpass.plist
+#
 
 PATH=/usr/bin:/bin:/usr/sbin:/sbin:/opt/local/bin
 
@@ -50,6 +82,7 @@ PWFILE="$SCRIPT_DIR/cronpw.txt"
 . "$SCRIPT_DIR/get_password.sh"
 
 main() {
+
   if [ ! -f "$MACPORTS_PATH/7z" ]; then
 	  logger Cannot create backup - 7z command not found!
 	  #Sofern nicht Root, dann Notification an Nutzer
@@ -94,7 +127,7 @@ main() {
   cp -R $SRC_DIR2 $BACKUP_DIR/$TEMP_DIR
 
   #Erstellen des finalen tar-Archivs
-  tar --no-xattrs -cf $BACKUP_DIR/$PROJECT_NAME-$DATE.tar -C $BACKUP_DIR/$TEMP_DIR/ . 
+  tar --no-xattrs -cf $BACKUP_DIR/$PROJECT_NAME-$DATE.tar -C $BACKUP_DIR/$TEMP_DIR/ .
 
   #tar-archiv in 7z einpacken (lokale Kopie ohne Passwort)
   #zunächst bestehendes Archiv ggf. weglöschen

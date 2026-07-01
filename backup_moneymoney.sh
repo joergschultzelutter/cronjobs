@@ -1,28 +1,61 @@
-#!/bin/zsh
+#!/bin/bash
 #
-# Cronjob zum Backup der MoneyMoney-Datenbank
+# Batchjob zum Backup der MoneyMoney-Datenbank
 # Von den Backup-Archiven werden jeweils nur die letzten 15 Backups behalten; der Rest wird gelöscht
 #
-# Ab MacOS Catalina notwendig: System Preferences - Privacy & Security - Full Disk Access -> /usr/sbin/cron hinzufügen
+# Ab MacOS Catalina notwendig: System Preferences - Privacy & Security - Full Disk Access -> /bin/bash und /opt/local/bin/7zz hinzufügen
 #
 # Entpacken der Dateien via 7z x -p"<Passwort>"
 #
-# Autor: Jörg Schultze-Luttr, 2025
+# Autor: Jörg Schultze-Lutter, 2025
 #
+#
+# NICHT per cron ausführen; Ausführung per cron kann zu Race Condition führen
+#
+#
+# LaunchAgent settings
+#
+#<?xml version="1.0" encoding="UTF-8"?>
+#<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+# "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+#<plist version="1.0">
+#<dict>
+#  <key>Label</key>
+#  <string>com.jsl.backup_moneymoney</string>
+#
+#  <key>ProgramArguments</key>
+#  <array>
+#    <string>/Users/jsl/cronjobs/backup_moneymoney.sh</string>
+#  </array>
+#
+#  <key>StartCalendarInterval</key>
+#  <dict>
+#    <key>Hour</key>
+#    <integer>20</integer>
+#    <key>Minute</key>
+#    <integer>0</integer>
+#  </dict>
+#
+#  <key>StandardOutPath</key>
+#  <string>/tmp/backup-moneymoney-launchd.out</string>
+#
+#  <key>StandardErrorPath</key>
+#  <string>/tmp/backup-moneymoney-launchd.err</string>
+#
+#  <key>WorkingDirectory</key>
+#  <string>/Users/jsl</string>
+#</dict>
+#</plist>
 
 #
-# Crontab-Settings
+# speichern als ~/Library/LaunchAgents/com.jsl.backup_moneymoney.plist
 #
-# *     *     *     *     *  command
-# -     -     -     -     -
-# |     |     |     |     |
-# |     |     |     |     +----- weekday (0 - 7) (Sunday = 0 and 7)
-# |     |     |     +------- month (1 - 12)
-# |     |     +--------- day (1 - 31)
-# |     +----------- hour (0 - 23)
-# +------------- minute (0 - 59)
-#0 20 * * * /Users/jsl/cronjobs/backup_moneymoney.sh
-
+# Installieren: launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.jsl.backup_moneymoney.plist
+#
+# Manuell ausführen: launchctl kickstart -k gui/$(id -u)/com.jsl.backup_moneymoney
+#
+# Deinstallieren: launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/com.jsl.backup_moneymoney.plist
+#
 
 PATH=/usr/bin:/bin:/usr/sbin:/sbin:/opt/local/bin
 
@@ -47,7 +80,7 @@ PWFILE="$SCRIPT_DIR/cronpw.txt"
 
 main() {
 
-  if [ ! -f "$MACPORTS_PATH/7z" ]; then
+  if [ ! -f "$MACPORTS_PATH/7zz" ]; then
 	  logger Cannot create backup - 7z command not found!
 	  #Sofern nicht Root, dann Notification an Nutzer
 	  if [ "$EUID" -ne 0 ]; then
@@ -80,7 +113,7 @@ main() {
   fi
 
   #nun das Verzeichnis  normal ohne Passwort einpacken
-  7z a -t7z -mx=9 $BACKUP_DIR/$PROJECT_NAME-$DATE.7z "$SRC_DIR/$SRC" > /dev/null
+  $MACPORTS_PATH/7zz a -t7z -mx=9 -bd -bb0 -y $BACKUP_DIR/$PROJECT_NAME-$DATE.7z "$SRC_DIR/$SRC" >/dev/null </dev/null
 
   #jetzt das tar-archiv für die Cloud erstellen; wird gesondert gesichert
   #zunächst bestehendes Archiv ggf. weglöschen
@@ -89,7 +122,7 @@ main() {
   fi
 
   #nun das gleiche Archiv gesondert geschützt in das Cloudvereichnis stellen
-  7z a -t7z -mx=9 -mhe=on -p"$MEINPASSWORT" $CLOUD_BACKUP_TEMP/$PROJECT_NAME/$PROJECT_NAME-$DATE.7z "$SRC_DIR/$SRC" > /dev/null
+  $MACPORTS_PATH/7zz a -t7z -mx=9 -mhe=on -p"$MEINPASSWORT" -bd -bb0 -y $CLOUD_BACKUP_TEMP/$PROJECT_NAME/$PROJECT_NAME-$DATE.7z "$SRC_DIR/$SRC" >/dev/null </dev/null
 
   #sofern root: anderen Nutzer zuweisen
   if [ "$EUID" -eq 0 ]; then

@@ -1,26 +1,55 @@
-#!/bin/zsh
+#!/bin/bash
 #
-# Cronjob zum Backup der lokalen Backups gen Google Drive
+# Batchjob zum Backup der lokalen Backups gen Google Drive
+# Ab MacOS Catalina notwendig: System Preferences - Privacy & Security - Full Disk Access -> /bin/bash und /opt/local/bin/7zz hinzufügen
 #
-# Ab MacOS Catalina notwendig: System Preferences - Privacy & Security - Full Disk Access -> /usr/sbin/cron hinzufügen
+# Autor: Jörg Schultze-Lutter, 2025
 #
-# Entpacken der Dateien via 7z x -p"<Passwort>"
+# NICHT per cron ausführen; Ausführung per cron kann zu Race Condition führen
 #
-# Autor: Jörg Schultze-Luter, 2025
+# LaunchAgent settings
 #
+#<?xml version="1.0" encoding="UTF-8"?>
+#<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+# "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+#<plist version="1.0">
+#<dict>
+#  <key>Label</key>
+#  <string>com.jsl.backup_to_google_drive</string>
+#
+#  <key>ProgramArguments</key>
+#  <array>
+#    <string>/Users/jsl/cronjobs/backup_to_google_drive.sh</string>
+#  </array>
+#
+#  <key>StartCalendarInterval</key>
+#  <dict>
+#    <key>Hour</key>
+#    <integer>20</integer>
+#    <key>Minute</key>
+#    <integer>0</integer>
+#  </dict>
+#
+#  <key>StandardOutPath</key>
+#  <string>/tmp/backup-to-google-drive-launchd.out</string>
+#
+#  <key>StandardErrorPath</key>
+#  <string>/tmp/backup-to-google-drive-launchd.err</string>
+#
+#  <key>WorkingDirectory</key>
+#  <string>/Users/jsl</string>
+#</dict>
+#</plist>
 
 #
-# Crontab-Settings
+# speichern als ~/Library/LaunchAgents/com.jsl.backup_to_google_drive.plist
 #
-# *     *     *     *     *  command
-# -     -     -     -     -
-# |     |     |     |     |
-# |     |     |     |     +----- weekday (0 - 7) (Sunday = 0 and 7)
-# |     |     |     +------- month (1 - 12)
-# |     |     +--------- day (1 - 31)
-# |     +----------- hour (0 - 23)
-# +------------- minute (0 - 59)
-#5 20 * * * /Users/jsl/cronjobs/backup_to_google_drive.sh
+# Installieren: launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.jsl.backup_to_google_drive.plist
+#
+# Manuell ausführen: launchctl kickstart -k gui/$(id -u)/com.jsl.backup_to_google_drive
+#
+# Deinstallieren: launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/com.jsl.backup_to_google_drive.plist
+#
 
 PATH=/usr/bin:/bin:/usr/sbin:/sbin:/opt/local/bin
 
@@ -81,12 +110,14 @@ main() {
   if [ -d "/Volumes/$ARCHIV_VOLNAME" ]; then
 	  rm -r /Volumes/$ARCHIV_VOLNAME/Enpass 2>/dev/null
 	  rm -r /Volumes/$ARCHIV_VOLNAME/MoneyMoney 2>/dev/null
+	  rm -r /Volumes/$ARCHIV_VOLNAME/Mozilla 2>/dev/null
 	  rm /Volumes/$ARCHIV_VOLNAME/version.txt 2>/dev/null
 
 	  echo Version: $DATE >/Volumes/$ARCHIV_VOLNAME/version.txt
 	  cp -r $CLOUD_BACKUP_TEMP/Enpass /Volumes/$ARCHIV_VOLNAME 2>/dev/null
 	  cp -r $CLOUD_BACKUP_TEMP/MoneyMoney /Volumes/$ARCHIV_VOLNAME 2>/dev/null
-	
+	  cp -r $CLOUD_BACKUP_TEMP/Mozilla /Volumes/$ARCHIV_VOLNAME 2>/dev/null
+
 	  hdiutil detach -quiet "/Volumes/$ARCHIV_VOLNAME"
 	  sleep 1
 	  echo -n $MEINPASSWORT|hdiutil compact -quiet -stdinpass $ARCHIV_DRIVENAME
